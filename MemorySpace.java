@@ -1,3 +1,5 @@
+import java.util.List;
+
 /**
  * Represents a managed memory space. The memory space manages a list of allocated 
  * memory blocks, and a list free memory blocks. The methods "malloc" and "free" are 
@@ -58,7 +60,21 @@ public class MemorySpace {
 	 * @return the base address of the allocated block, or -1 if unable to allocate
 	 */
 	public int malloc(int length) {		
-		//// Replace the following statement with your code
+		ListIterator iter = freeList.iterator();
+		while (iter.hasNext()) {
+			MemoryBlock block = iter.next();
+			if (block.length >= length) {
+				MemoryBlock newBlock = new MemoryBlock(block.baseAddress, length);
+
+				allocatedList.addLast(newBlock);	
+				block.baseAddress += length;
+				block.length -= length;
+				if(block.length == 0){
+					freeList.remove(block);
+				}
+				return newBlock.baseAddress;
+			}
+		}
 		return -1;
 	}
 
@@ -71,7 +87,18 @@ public class MemorySpace {
 	 *            the starting address of the block to freeList
 	 */
 	public void free(int address) {
-		//// Write your code here
+		if (allocatedList.getSize() == 0){
+			throw new IllegalArgumentException("index must be between 0 and size");
+		}
+		ListIterator iter = allocatedList.iterator();
+		while (iter.hasNext()) {
+			MemoryBlock block = iter.next();
+			if (block.baseAddress == address) {
+				freeList.addLast(block);
+				allocatedList.remove(block);
+				return;
+			}
+		}
 	}
 	
 	/**
@@ -79,7 +106,12 @@ public class MemorySpace {
 	 * for debugging purposes.
 	 */
 	public String toString() {
-		return freeList.toString() + "\n" + allocatedList.toString();		
+		if (freeList.toString() == "") {
+			return "\n" + allocatedList.toString() + " ";	
+		} else if (allocatedList.toString() == ""){
+			return freeList.toString() + " \n";	
+		}
+		return freeList.toString() + " " + "\n" + allocatedList.toString() + " ";		
 	}
 	
 	/**
@@ -88,7 +120,41 @@ public class MemorySpace {
 	 * In this implementation Malloc does not call defrag.
 	 */
 	public void defrag() {
-		/// TODO: Implement defrag test
-		//// Write your code here
+		LinkedList sortedFreeList = new LinkedList();
+		ListIterator iter = freeList.iterator();
+		while (iter.hasNext()) {
+			MemoryBlock block = iter.next();
+			boolean added = false;
+			ListIterator sortedIter = sortedFreeList.iterator();
+			while (sortedIter.hasNext()) {
+				MemoryBlock sortedBlock = sortedIter.next();
+				if (block.baseAddress < sortedBlock.baseAddress) {
+					sortedFreeList.add(sortedFreeList.indexOf(sortedBlock), block);
+					added = true;
+					break;
+				}
+			}
+			if (!added) {
+				sortedFreeList.addLast(block);
+			}
+		}
+		LinkedList merged = new LinkedList();
+		iter = sortedFreeList.iterator();
+
+		
+		while (iter.hasNext()) {
+			MemoryBlock block = iter.next();
+			if (merged.getSize() == 0) {
+				merged.addFirst(block);
+			} else {
+				MemoryBlock last = merged.getBlock(merged.getSize() - 1);
+				if (last.baseAddress + last.length == block.baseAddress) {
+					last.length += block.length;
+					freeList.remove(block);
+				} else {
+					merged.addLast(block);
+				}
+			}
+		}
 	}
 }
